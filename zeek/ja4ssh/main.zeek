@@ -22,7 +22,7 @@ export {
     resp_pack_len: vector of count &default = vector();
     orig_ack: count &default = 0;
     resp_ack: count &default = 0;
-    
+    ja4ssh_fingerprints: count &default = 0;
   };
 
   option ja4_ssh_packet_count = 200;
@@ -70,6 +70,7 @@ function get_mode(vec: vector of count): count {
 }
 
 function do_ja4ssh(c: connection) {
+  ++c$fp$ja4ssh$ja4ssh_fingerprints;
   c$fp$ja4ssh$ja4ssh = fmt("c%ds%d_c%ds%d_c%ds%d", 
       get_mode(c$fp$ja4ssh$orig_pack_len),
       get_mode(c$fp$ja4ssh$resp_pack_len),
@@ -100,6 +101,9 @@ event new_connection(c: connection) {
 }
 
 event ConnThreshold::packets_threshold_crossed(c: connection, threshold: count, is_orig: bool) {
+    if (FINGERPRINT::JA4SSH_max_fingerprints != 0 && c$fp$ja4ssh$ja4ssh_fingerprints == FINGERPRINT::JA4SSH_max_fingerprints) {
+        return;
+    }
     if (!c$fp$ja4ssh$is_ssh && threshold > 5) {   # TODO: does this need to be configurable?
         return;
     }
@@ -145,7 +149,7 @@ event ssh_server_version(c: connection, version: string) {
 }
 
 event connection_state_remove(c: connection) {
-  if(c?$fp && c$fp?$ja4ssh && c$fp$ja4ssh$is_ssh) {
+  if(c?$fp && c$fp?$ja4ssh && c$fp$ja4ssh$is_ssh && (FINGERPRINT::JA4SSH_max_fingerprints == 0 || c$fp$ja4ssh$ja4ssh_fingerprints < FINGERPRINT::JA4SSH_max_fingerprints)) {
     do_ja4ssh(c);
   }
 }
