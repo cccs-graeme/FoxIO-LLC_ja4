@@ -73,8 +73,10 @@ event new_connection(c: connection) {
     if(!c?$fp) { c$fp = FINGERPRINT::Info(); }
     
     local rp = get_current_packet_header();
-    if (rp?$tcp && rp$tcp$flags != TH_SYN) {
-        return;  
+    if (rp?$tcp) {
+        if ((rp$tcp$flags & TH_SYN) == 0 || (rp$tcp$flags & TH_ACK) == TH_ACK) {
+            return;
+        }
     }
 
     c$fp$ja4l$syn = get_current_packet_timestamp();
